@@ -1,0 +1,48 @@
+const mongoose = require('mongoose');
+
+const auditLogSchema = new mongoose.Schema({
+  action: {
+    type: String,
+    required: true
+  },
+  actorName: {
+    type: String,
+    required: true
+  },
+  actorRole: {
+    type: String,
+    default: 'System'
+  },
+  actorId: {
+    type: String,
+    default: ''
+  },
+  appealId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Appeal'
+  },
+  appealNumber: {
+    type: String,
+    default: ''
+  },
+  prevState: {
+    type: String,
+    default: ''
+  },
+  newState: {
+    type: String,
+    default: ''
+  },
+  details: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
+  },
+  ipAddress: {
+    type: String,
+    default: '127.0.0.1'
+  }
+}, {
+  timestamps: true
+});
+
+module.exports = mongoose.model('AuditLog', auditLogSchema);
