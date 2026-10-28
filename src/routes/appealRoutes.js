@@ -12,5 +12,6 @@ router.get('/:id', protect, appealController.getAppealById);
 router.put('/:id/status', protect, appealController.updateAppealStatus);
 router.post('/:id/rate', protect, appealController.submitRating);
 router.post('/:id/objection', protect, appealController.submitObjection);
+router.post('/:id/object', protect, appealController.submitObjection);
 
 module.exports = router;

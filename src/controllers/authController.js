@@ -78,7 +78,7 @@ exports.employeeLogin = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Username and password are required' });
     }
     
-    const employee = await Employee.findOne({ username });
+    const employee = await Employee.findOne({ username }).populate('organization department');
     if (!employee) {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }

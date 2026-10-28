@@ -3,6 +3,7 @@ const Appeal = require('../models/appeal');
 const Notification = require('../models/notification');
 const Citizen = require('../models/citizen');
 const logger = require('../utils/logger');
+const bot = require('../bot/bot');
 
 exports.sendMessage = async (req, res) => {
   try {
@@ -21,6 +22,18 @@ exports.sendMessage = async (req, res) => {
     if (req.userRole === 'Citizen') {
       if (appeal.citizen.toString() !== req.user._id.toString()) {
         return res.status(403).json({ success: false, message: 'Access denied' });
+      }
+    } else {
+      const globalRoles = ['Super Admin', 'Agency Admin', 'Agency Inspector'];
+      if (!globalRoles.includes(req.userRole)) {
+        const userOrgId = (req.user?.organization?._id || req.user?.organization || '').toString();
+        const appealOrgId = (appeal.organization?._id || appeal.organization || '').toString();
+        if (!userOrgId || userOrgId !== appealOrgId) {
+          return res.status(403).json({
+            success: false,
+            message: 'Ruxsat etilmagan: Bu murojaat boshqa tashkilotga tegishli / Access denied: Appeal belongs to another organization'
+          });
+        }
       }
     }
     
@@ -41,9 +54,21 @@ exports.sendMessage = async (req, res) => {
       attachments: attachments || []
     });
     
-    // Create notification if sent by employee to citizen (only for public comments)
+    // Create notification and send direct Telegram message to citizen (if public comment)
     if (req.userRole !== 'Citizen' && !isInternal) {
       const citizen = await Citizen.findById(appeal.citizen);
+      if (citizen && citizen.telegramId) {
+        try {
+          const notifyText = `💬 <b>Murojaatingiz bo'yicha javob xabari:</b>\n\n` +
+            `🔢 Murojaat kodi: <code>${appeal.appealNumber}</code>\n` +
+            `👤 Xodim: <b>${senderName}</b>\n\n` +
+            `✉️ <b>Xabar:</b>\n${text || ''}`;
+          await bot.telegram.sendMessage(citizen.telegramId, notifyText, { parse_mode: 'HTML' });
+        } catch (botErr) {
+          logger.warn(`Failed to send telegram msg to citizen: ${botErr.message}`);
+        }
+      }
+
       if (citizen && citizen.notificationEnabled) {
         await Notification.create({
           citizen: citizen._id,
@@ -76,8 +101,22 @@ exports.getMessages = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Appeal not found' });
     }
     
-    if (req.userRole === 'Citizen' && appeal.citizen.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ success: false, message: 'Access denied' });
+    if (req.userRole === 'Citizen') {
+      if (appeal.citizen.toString() !== req.user._id.toString()) {
+        return res.status(403).json({ success: false, message: 'Access denied' });
+      }
+    } else {
+      const globalRoles = ['Super Admin', 'Agency Admin', 'Agency Inspector'];
+      if (!globalRoles.includes(req.userRole)) {
+        const userOrgId = (req.user?.organization?._id || req.user?.organization || '').toString();
+        const appealOrgId = (appeal.organization?._id || appeal.organization || '').toString();
+        if (!userOrgId || userOrgId !== appealOrgId) {
+          return res.status(403).json({
+            success: false,
+            message: 'Ruxsat etilmagan: Bu murojaat boshqa tashkilotga tegishli / Access denied: Appeal belongs to another organization'
+          });
+        }
+      }
     }
     
     let query = { appeal: appealId };

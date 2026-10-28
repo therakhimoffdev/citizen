@@ -52,8 +52,8 @@ const registerRatingsHandlers = (bot) => {
     }
   });
 
-  // Action callback hooks to trigger Rating and Objection scenes
-  bot.action(/^rate_apl_(.+)$/, async (ctx) => {
+  // Action callback hooks to trigger Rating and Objection scenes (supports rate_apl_... and rate_...)
+  bot.action(/^rate(?:_apl)?_(.+)$/, async (ctx) => {
     try {
       const appealId = ctx.match[1];
       await ctx.answerCbQuery();
@@ -63,7 +63,7 @@ const registerRatingsHandlers = (bot) => {
     }
   });
 
-  bot.action(/^object_apl_(.+)$/, async (ctx) => {
+  bot.action(/^object(?:_apl)?_(.+)$/, async (ctx) => {
     try {
       const appealId = ctx.match[1];
       await ctx.answerCbQuery();

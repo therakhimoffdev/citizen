@@ -1,5 +1,6 @@
 const path = require('path');
 const fs = require('fs');
+const mongoose = require('mongoose');
 const Appeal = require('../models/appeal');
 const Organization = require('../models/organization');
 const Department = require('../models/department');
@@ -205,8 +206,23 @@ exports.getAppealById = async (req, res) => {
     }
     
     // Check access
-    if (req.userRole === 'Citizen' && appeal.citizen._id.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ success: false, message: 'Access denied' });
+    if (req.userRole === 'Citizen') {
+      if (appeal.citizen._id.toString() !== req.user._id.toString()) {
+        return res.status(403).json({ success: false, message: 'Access denied' });
+      }
+    } else {
+      // Employee organization isolation
+      const globalRoles = ['Super Admin', 'Agency Admin', 'Agency Inspector', 'Auditor', 'Analyst'];
+      if (!globalRoles.includes(req.userRole)) {
+        const userOrgId = (req.user?.organization?._id || req.user?.organization || '').toString();
+        const appealOrgId = (appeal.organization?._id || appeal.organization || '').toString();
+        if (!userOrgId || userOrgId !== appealOrgId) {
+          return res.status(403).json({
+            success: false,
+            message: 'Ruxsat etilmagan: Bu murojaat boshqa tashkilotga tegishli / Access denied: Appeal belongs to another organization'
+          });
+        }
+      }
     }
     
     const history = await AppealHistory.find({ appeal: appeal._id }).sort({ createdAt: 1 });
@@ -250,6 +266,19 @@ exports.updateAppealStatus = async (req, res) => {
     
     if (!appeal) {
       return res.status(404).json({ success: false, message: 'Appeal not found' });
+    }
+
+    // Role & Organization boundary check
+    const globalRoles = ['Super Admin', 'Agency Admin', 'Agency Inspector'];
+    if (!globalRoles.includes(req.userRole)) {
+      const userOrgId = (req.user?.organization?._id || req.user?.organization || '').toString();
+      const appealOrgId = (appeal.organization?._id || appeal.organization || '').toString();
+      if (!userOrgId || userOrgId !== appealOrgId) {
+        return res.status(403).json({
+          success: false,
+          message: 'Ruxsat etilmagan: Siz faqat o\'z tashkilotingiz murojaatlarini o\'zgartira olasiz / Access denied'
+        });
+      }
     }
     
     const prevStatus = appeal.status;
@@ -383,52 +412,62 @@ exports.submitRating = async (req, res) => {
   }
 };
 
-// Submit Objection (Citizen only, status must be Completed)
+// Submit Objection (Citizen or Employee action)
 exports.submitObjection = async (req, res) => {
   try {
     const { reason, attachments } = req.body;
     const appeal = await Appeal.findById(req.params.id);
-    
+
     if (!appeal) {
       return res.status(404).json({ success: false, message: 'Appeal not found' });
     }
-    
-    if (appeal.citizen.toString() !== req.user._id.toString()) {
+
+    if (req.userRole === 'Citizen' && appeal.citizen.toString() !== req.user._id.toString()) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
-    
-    if (appeal.status !== 'Completed') {
-      return res.status(400).json({ success: false, message: 'Objection can only be submitted for Completed appeals' });
-    }
-    
+
+    const prevStatus = appeal.status;
+    appeal.status = 'Objection';
     appeal.objection = {
-      reason,
+      reason: reason || 'Citizen expressed dissatisfaction with the execution result.',
       attachments: attachments || [],
       status: 'Under Review',
       submittedAt: new Date()
     };
-    appeal.status = 'In Progress'; // Move back to In Progress / Under Review status
-    
+
     await appeal.save();
-    
+
+    const actorName = req.userRole === 'Citizen'
+      ? (`${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.telegramId || 'Citizen')
+      : (req.user.fullName || 'Employee');
+
     await AppealHistory.create({
       appeal: appeal._id,
-      status: 'In Progress',
+      status: 'Objection',
       action: 'Objection Submitted',
-      comment: `Objection reason: ${reason}`,
+      comment: reason || 'Fuqaro ijro bo\'yicha e\'tiroz bildirdi',
       performedBy: {
-        role: 'Citizen',
+        role: req.userRole || 'Citizen',
         id: req.user._id,
-        roleRef: 'Citizen',
-        name: `${req.user.firstName} ${req.user.lastName}`.trim() || req.user.telegramId
+        name: actorName
       }
     });
-    
-    // Create notifications for citizen
+
+    await logAudit({
+      action: 'APPEAL_OBJECTION_SUBMITTED',
+      actorName,
+      actorRole: req.userRole || 'Citizen',
+      actorId: req.user._id,
+      appealId: appeal._id,
+      appealNumber: appeal.appealNumber,
+      prevState: prevStatus,
+      newState: 'Objection',
+      details: { reason }
+    });
+
     await createStatusNotification(appeal, 'Under Review');
-    
-    logger.info(`Citizen submitted objection for ${appeal.appealNumber}`);
-    
+
+    logger.info(`Objection submitted for appeal ${appeal.appealNumber} by ${actorName}`);
     res.status(200).json({ success: true, data: appeal });
   } catch (error) {
     logger.error(`submitObjection error: ${error.message}`);
@@ -436,19 +475,27 @@ exports.submitObjection = async (req, res) => {
   }
 };
 
-// Get all appeals for Employee/Agent/Moderator/Admin
+// Get all appeals for Employee/Agent/Moderator/Admin with organization isolation
 exports.getEmployeeAppeals = async (req, res) => {
   try {
     let query = {};
     
     // Role based restrictions
-    const globalRoles = ['Super Admin', 'Agency Admin', 'Agency Inspector', 'Auditor', 'Analyst', 'Admin'];
+    const globalRoles = ['Super Admin', 'Agency Admin', 'Agency Inspector', 'Auditor', 'Analyst'];
     if (globalRoles.includes(req.userRole)) {
-      // Global roles can see all appeals across organizations
-    } else if (req.user && req.user.organization) {
-      // Organization scoped roles see appeals of their organization
-      const orgId = req.user.organization._id || req.user.organization;
-      query.organization = orgId;
+      // Global roles can see all appeals across organizations, or filter by specific organization if requested
+      if (req.query.organization) {
+        query.organization = req.query.organization;
+      }
+    } else {
+      // Organization scoped roles see ONLY appeals of their own organization
+      const orgId = req.user?.organization?._id || req.user?.organization;
+      if (orgId) {
+        query.organization = orgId;
+      } else {
+        // If employee has no organization assigned, return empty
+        query.organization = new mongoose.Types.ObjectId();
+      }
     }
     
     // Apply filters from query params
@@ -473,7 +520,6 @@ exports.getEmployeeAppeals = async (req, res) => {
         if (dep) {
           query.department = dep._id;
         } else {
-          // Fallback, if department not found, don't match any.
           query.department = new mongoose.Types.ObjectId();
         }
       }
@@ -495,57 +541,6 @@ exports.getEmployeeAppeals = async (req, res) => {
     res.status(200).json({ success: true, count: appeals.length, data: appeals });
   } catch (error) {
     logger.error(`getEmployeeAppeals error: ${error.message}`);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-};
-
-// Submit Objection (Citizen action)
-exports.submitObjection = async (req, res) => {
-  try {
-    const { reason, attachments } = req.body;
-    const appeal = await Appeal.findById(req.params.id);
-
-    if (!appeal) {
-      return res.status(404).json({ success: false, message: 'Appeal not found' });
-    }
-
-    const prevStatus = appeal.status;
-    appeal.status = 'Objection';
-    appeal.objection = {
-      reason: reason || 'Citizen expressed dissatisfaction with the execution result.',
-      attachments: attachments || [],
-      status: 'Under Review',
-      submittedAt: new Date()
-    };
-
-    await appeal.save();
-
-    await AppealHistory.create({
-      appeal: appeal._id,
-      status: 'Objection',
-      action: 'Citizen Filed Objection',
-      comment: reason || 'Citizen filed objection to resolution',
-      performedBy: {
-        role: 'Citizen',
-        id: appeal.citizen,
-        name: 'Citizen'
-      }
-    });
-
-    await logAudit({
-      action: 'Citizen Filed Objection',
-      actorName: 'Citizen',
-      actorRole: 'Citizen',
-      appealId: appeal._id,
-      appealNumber: appeal.appealNumber,
-      prevState: prevStatus,
-      newState: 'Objection',
-      details: { reason }
-    });
-
-    res.status(200).json({ success: true, data: appeal });
-  } catch (error) {
-    logger.error(`submitObjection error: ${error.message}`);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };

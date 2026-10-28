@@ -46,10 +46,26 @@ exports.getAuditLogs = async (req, res) => {
 exports.getAppealAuditLogs = async (req, res) => {
   try {
     const { appealNumber } = req.params;
+    const Appeal = require('../models/appeal');
+
+    const appeal = await Appeal.findOne({ appealNumber });
+    if (!appeal) {
+      return res.status(404).json({ success: false, message: 'Appeal not found' });
+    }
+
+    const globalRoles = ['Super Admin', 'Agency Admin', 'Agency Inspector'];
+    if (!globalRoles.includes(req.userRole)) {
+      const userOrgId = (req.user?.organization?._id || req.user?.organization || '').toString();
+      const appealOrgId = (appeal.organization?._id || appeal.organization || '').toString();
+      if (userOrgId && appealOrgId && userOrgId !== appealOrgId) {
+        return res.status(403).json({ success: false, message: 'Access denied: Appeal belongs to another organization' });
+      }
+    }
+
     const logs = await AuditLog.find({
       $or: [
         { appealNumber },
-        { appealId: req.params.appealId }
+        { appealId: appeal._id }
       ]
     }).sort({ createdAt: 1 });
 

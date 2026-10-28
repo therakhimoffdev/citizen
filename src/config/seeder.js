@@ -430,59 +430,99 @@ const seedDB = async () => {
       logger.info(`Seeded Organization: ${org.name.uz} with ${createdDeps.length} departments.`);
     }
 
-    // Seed default employee accounts
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash('admin123', salt);
+    // Map credentials for all 34 organizations
+    const orgCredentials = {
+      XONOBOD_HOKIMLIGI: { username: 'hokimiyat_admin', password: 'Hokim#2026!', fullName: 'Хонобод шаҳар ҳокимлиги масъули' },
+      XONOBOD_TEXNIKUM_1: { username: 'texnikum1_admin', password: 'Texnik1#2026!', fullName: '1-сон техникум масъули' },
+      XONOBOD_TEXNIKUM_2: { username: 'texnikum2_admin', password: 'Texnik2#2026!', fullName: '2-сон техникум масъули' },
+      XONOBOD_ADLIYA: { username: 'adliya_admin', password: 'Adliya#2026!', fullName: 'Адлия бўлими масъули' },
+      XONOBOD_VETERINARIYA: { username: 'veterinariya_admin', password: 'Vet#2026!', fullName: 'Ветеринария бўлими масъули' },
+      XONOBOD_GAZ: { username: 'gaz_admin', password: 'Gaz#2026!', fullName: 'Хонобод шаҳар газ таъминоти бўлими масъули' },
+      XONOBOD_YOSHLAR: { username: 'yoshlar_admin', password: 'Yoshlar#2026!', fullName: 'Ёшлар ишлари бўлими масъули' },
+      XONOBOD_IJTIMOIY_HIMOYA: { username: 'ijtimoiy_admin', password: 'Ijtimoiy#2026!', fullName: 'Ижтимоий ҳимоя бўлими масъули' },
+      XONOBOD_IIB: { username: 'iib_admin', password: 'IIB#2026!', fullName: 'Ички ишлар бўлими (ИИБ) масъули' },
+      XONOBOD_KADASTR: { username: 'kadastr_admin', password: 'Kadastr#2026!', fullName: 'Кадастр бўлими масъули' },
+      XONOBOD_KAMBAGALLIK: { username: 'kambagallik_admin', password: 'Kambagal#2026!', fullName: 'Камбағалликни қисқартириш бўлими масъули' },
+      XONOBOD_MADANIYAT: { username: 'madaniyat_admin', password: 'Madaniyat#2026!', fullName: 'Маданият бошқармаси масъули' },
+      XONOBOD_MIB: { username: 'mib_admin', password: 'MIB#2026!', fullName: 'Мажбурий ижро бюроси (МИБ) масъули' },
+      XONOBOD_MAKTABGACHA: { username: 'maktabgacha_admin', password: 'Bogcha#2026!', fullName: 'Мактабгача таълим бўлими масъули' },
+      XONOBOD_MAHALLA: { username: 'mahalla_admin', password: 'Mahalla#2026!', fullName: 'Маҳалла уюшмаси масъули' },
+      XONOBOD_MANAVIYAT: { username: 'manaviyat_admin', password: 'Manaviyat#2026!', fullName: 'Маънавият ва маърифат бўлими масъули' },
+      XONOBOD_MUDOFAA: { username: 'mudofaa_admin', password: 'Mudofaa#2026!', fullName: 'Мудофаа бўлими масъули' },
+      XONOBOD_PROKURATURA: { username: 'prokuratura_admin', password: 'Prokuror#2026!', fullName: 'Прокуратура масъули' },
+      XONOBOD_SES: { username: 'ses_admin', password: 'SES#2026!', fullName: 'СЭС бўлими масъули' },
+      XONOBOD_SOLIQ: { username: 'soliq_admin', password: 'Soliq#2026!', fullName: 'Солиқ инспекцияси масъули' },
+      XONOBOD_SPORT: { username: 'sport_admin', password: 'Sport#2026!', fullName: 'Спорт бошқармаси масъули' },
+      XONOBOD_SUV: { username: 'suv_admin', password: 'Suv#2026!', fullName: 'Сув таъминоти бўлими масъули' },
+      XONOBOD_TTB: { username: 'ttb_admin', password: 'TTB#2026!', fullName: 'Туман тиббиёт бирлашмаси (ТТБ) масъули' },
+      XONOBOD_UZSQB: { username: 'uzsqb_admin', password: 'Uzsqb#2026!', fullName: '«Ўзсаноатқурилишбанк» масъули' },
+      XONOBOD_UY_JOY: { username: 'uy_joy_admin', password: 'UyJoy#2026!', fullName: 'Уй-жой коммунал хизмат бўлими масъули' },
+      XONOBOD_FVB: { username: 'fvb_admin', password: 'FVB#2026!', fullName: 'Фавқулодда вазиятлар бўлими (ФВБ) масъули' },
+      XONOBOD_XALQ_BANKI: { username: 'xalq_banki_admin', password: 'XalqBank#2026!', fullName: 'Халқ банки масъули' },
+      XONOBOD_XOTIN_QIZLAR: { username: 'xotin_qizlar_admin', password: 'Ayollar#2026!', fullName: 'Хотин-қизлар қўмитаси масъули' },
+      XONOBOD_HOKIM_YOSHLAR_URINBOSAR: { username: 'hokim_yoshlar_admin', password: 'HokimYosh#2026!', fullName: 'Ҳокимнинг ёшлар сиёсати бўйича ўринбосари котибияти' },
+      XONOBOD_HOKIM_QURILISH_URINBOSAR: { username: 'hokim_qurilish_admin', password: 'HokimQur#2026!', fullName: 'Ҳокимнинг қурилиш ва коммунал бўйича ўринбосари котибияти' },
+      XONOBOD_HOKIM_MOLIYA_BIRINCHI_URINBOSAR: { username: 'hokim_moliya_admin', password: 'HokimMol#2026!', fullName: 'Ҳокимнинг молия бўйича 1-ўринбосари котибияти' },
+      XONOBOD_HOKIM_INVESTITSIYA_URINBOSAR: { username: 'hokim_invest_admin', password: 'HokimInv#2026!', fullName: 'Ҳокимнинг инвестициялар бўйича ўринбосари котибияти' },
+      XONOBOD_EKOLOGIYA: { username: 'ekologiya_admin', password: 'Ekologiya#2026!', fullName: 'Экология бўлими масъули' },
+      XONOBOD_ELEKTR: { username: 'elektr_admin', password: 'Elektr#2026!', fullName: 'Электр тармоқлари бўлими масъули' }
+    };
 
+    const salt = await bcrypt.genSalt(10);
+    const orgAdminsMap = {};
+
+    // Create unique login credentials for EACH organization
+    for (const org of createdOrgs) {
+      const cred = orgCredentials[org.code] || {
+        username: `${org.code.toLowerCase()}_admin`,
+        password: `${org.code.toLowerCase()}#2026!`,
+        fullName: `${org.name.uz} mas'uli`
+      };
+
+      const orgHashedPassword = await bcrypt.hash(cred.password, salt);
+      const defaultDep = await Department.findOne({ organization: org._id });
+
+      const employeeAccount = await Employee.create({
+        username: cred.username,
+        password: orgHashedPassword,
+        fullName: cred.fullName,
+        role: 'Organization Admin',
+        organization: org._id,
+        department: defaultDep ? defaultDep._id : undefined
+      });
+
+      orgAdminsMap[org.code] = employeeAccount;
+      logger.info(`Seeded Org Account [${org.name.uz}]: username=${cred.username}, password=${cred.password}`);
+    }
+
+    // Seed Global Super Admin
     const defaultOrg = createdOrgs[0]; // Khonabad City Khokimiyat
     const defaultDep = await Department.findOne({ organization: defaultOrg._id });
+    const superAdminHash = await bcrypt.hash('admin123', salt);
 
-    // Super Admin / Org Admin
     const admin = await Employee.create({
       username: 'admin',
-      password: hashedPassword,
-      fullName: 'Sirojiddin Alimov',
+      password: superAdminHash,
+      fullName: 'Sirojiddin Alimov (Super Admin)',
       role: 'Super Admin',
       organization: defaultOrg._id,
       department: defaultDep._id
     });
-    logger.info(`Seeded Super Admin: ${admin.username} (password: admin123)`);
+    logger.info(`Seeded Super Admin: admin (password: admin123)`);
 
-    // Agency Inspector
+    // Seed Agency Inspector (Government Oversight)
     const inspector = await Employee.create({
       username: 'inspector',
-      password: hashedPassword,
-      fullName: 'Farrux Rahimov',
+      password: superAdminHash,
+      fullName: 'Farrux Rahimov (Agency Inspector)',
       role: 'Agency Inspector',
       organization: defaultOrg._id,
       department: defaultDep._id
     });
-    logger.info(`Seeded Agency Inspector: ${inspector.username} (password: admin123)`);
+    logger.info(`Seeded Agency Inspector: inspector (password: admin123)`);
 
-    // Operator
-    const operator = await Employee.create({
-      username: 'operator',
-      password: hashedPassword,
-      fullName: 'Malika Sobirova',
-      role: 'Operator',
-      organization: defaultOrg._id,
-      department: defaultDep._id
-    });
-    logger.info(`Seeded Operator: ${operator.username} (password: admin123)`);
-
-    // Agent / Responsible Employee
-    const agent = await Employee.create({
-      username: 'agent',
-      password: hashedPassword,
-      fullName: 'Dilshod Karimov',
-      role: 'Agent',
-      organization: defaultOrg._id,
-      department: defaultDep._id
-    });
-    logger.info(`Seeded Agent Employee: ${agent.username} (password: admin123)`);
-
-    // Seed sample citizen
-    const citizen = await Citizen.create({
+    // Seed sample citizens
+    const citizen1 = await Citizen.create({
       telegramId: 99887766,
       firstName: 'Javohir',
       lastName: 'Ergashev',
@@ -491,52 +531,191 @@ const seedDB = async () => {
       language: 'uz'
     });
 
-    // Seed Sample Appeals in different lifecycle states
-    const appeal1 = await Appeal.create({
-      appealNumber: 'APL-2026-000101',
-      citizen: citizen._id,
-      organization: defaultOrg._id,
-      department: defaultDep._id,
-      category: 'Hokimiyat masalalari',
-      subject: 'Xonobod shahar hokimligiga infratuzilma bo\'yicha murojaat',
-      description: "Xonobod shahri markaziy ko'chasida tungi yoritish chiroqlari va yo'l infratuzilmasini yaxshilash so'raladi.",
-      status: 'Execution Submitted',
-      priority: 'High',
-      assignedEmployee: agent._id,
-      executionReport: {
-        text: 'Tungi yoritish chiroqlari almashtirildi va hudud ko\'zdan kechirildi.',
-        submittedAt: new Date()
-      }
+    const citizen2 = await Citizen.create({
+      telegramId: 88776655,
+      firstName: 'Dilnoza',
+      lastName: 'Usmonova',
+      username: 'd_usmonova',
+      phone: '+998 93 987 65 43',
+      language: 'uz'
     });
 
-    const appeal2 = await Appeal.create({
+    // -------------------------------------------------------------------
+    // SEED APPEALS SPECIFICALLY ROUTED TO MATCHING ORGANIZATIONS
+    // -------------------------------------------------------------------
+
+    // 1. GAZ TA'MINOTI BO'LIMI (XONOBOD_GAZ) - Specific appeals for Gas Department
+    const gasOrg = createdOrgs.find(o => o.code === 'XONOBOD_GAZ');
+    const gasDep = await Department.findOne({ organization: gasOrg._id });
+    const gasAdmin = orgAdminsMap['XONOBOD_GAZ'];
+
+    // 1a. Gas: Yangi kelgan murojaat (Received)
+    await Appeal.create({
+      appealNumber: 'APL-2026-000103',
+      citizen: citizen1._id,
+      organization: gasOrg._id,
+      department: gasDep._id,
+      category: 'Gaz ta\'minoti',
+      subject: 'Xonobod shahar Navro\'z MFY gaz bosimi juda pastligi',
+      description: 'Navro\'z MFY, Yoshlik ko\'chasi 45-uy atrofidagi 12 ta xonadonda tabiiy gaz bosimi juda pasayib ketgan, isitish qozonlari o\'chib qolyapti. Gaz ta\'minoti xodimlari kelib bosimni rostlab berishlarini so\'raymiz.',
+      status: 'Received',
+      priority: 'High',
+      createdAt: new Date(Date.now() - 2 * 3600 * 1000)
+    });
+
+    // 1b. Gas: Ijro jarayonida (In Progress)
+    await Appeal.create({
+      appealNumber: 'APL-2026-000104',
+      citizen: citizen2._id,
+      organization: gasOrg._id,
+      department: gasDep._id,
+      category: 'Gaz hisoblagich',
+      subject: 'Mustaqillik ko\'chasida zamonaviy gaz hisoblagich o\'rnatish',
+      description: 'Mustaqillik ko\'chasi 18-uyda yangi elektron gaz hisoblagichni davlat tekshiruvidan o\'tkazish va qayta tamg\'alash bo\'yicha ariza.',
+      status: 'In Progress',
+      priority: 'Medium',
+      assignedEmployee: gasAdmin._id,
+      createdAt: new Date(Date.now() - 24 * 3600 * 1000)
+    });
+
+    // 1c. Gas: Ijro hisoboti topshirilgan (Execution Submitted - waiting Agency Review)
+    await Appeal.create({
+      appealNumber: 'APL-2026-000105',
+      citizen: citizen1._id,
+      organization: gasOrg._id,
+      department: gasDep._id,
+      category: 'Gaz tarmoqlari ta\'miri',
+      subject: 'Xonobod markaziy ko\'chasida gaz quvuri nosozligi bartaraf etildi',
+      description: 'Markaziy ko\'cha bo\'ylab o\'tgan o\'rta bosimli gaz quvuridagi nosozlik to\'g\'risida murojaat.',
+      status: 'Execution Submitted',
+      priority: 'Urgent',
+      assignedEmployee: gasAdmin._id,
+      executionReport: {
+        text: 'Gaz ta\'minoti brigadasi tomonidan 150 metr masofadagi gaz quvuri ko\'rikdan o\'tkazildi, vtulka va kranlar yangisiga almashtirildi, bosim me\'yorga keltirildi.',
+        submittedAt: new Date(Date.now() - 4 * 3600 * 1000)
+      },
+      createdAt: new Date(Date.now() - 48 * 3600 * 1000)
+    });
+
+    // 1d. Gas: Bajarilgan (Completed)
+    await Appeal.create({
+      appealNumber: 'APL-2026-000106',
+      citizen: citizen2._id,
+      organization: gasOrg._id,
+      department: gasDep._id,
+      category: 'Gaz ta\'minoti',
+      subject: 'Yangiobod mahallasidagi gaz ta\'minoti tiklandi',
+      description: 'Profilaktika ishlaridan so\'ng gaz berish kechikyapti.',
+      status: 'Completed',
+      priority: 'Low',
+      assignedEmployee: gasAdmin._id,
+      executionReport: {
+        text: 'Rejali ta\'mirlash yakunlandi va gaz tarmog\'iga to\'liq uzatildi.',
+        submittedAt: new Date(Date.now() - 72 * 3600 * 1000)
+      },
+      rating: {
+        score: 5,
+        problemSolved: true,
+        employeeBehavior: 5,
+        responseQuality: 5,
+        speed: 5,
+        comment: 'Tez va sifatli hal qilindi, rahmat!'
+      },
+      createdAt: new Date(Date.now() - 96 * 3600 * 1000)
+    });
+
+    // 2. ELEKTR TARMOQLARI BO'LIMI (XONOBOD_ELEKTR)
+    const elektrOrg = createdOrgs.find(o => o.code === 'XONOBOD_ELEKTR');
+    const elektrDep = await Department.findOne({ organization: elektrOrg._id });
+    const elektrAdmin = orgAdminsMap['XONOBOD_ELEKTR'];
+
+    await Appeal.create({
       appealNumber: 'APL-2026-000102',
-      citizen: citizen._id,
-      organization: createdOrgs[33]._id, // Xonobod shahar elektr tarmoqlari bo'limi
-      department: (await Department.findOne({ organization: createdOrgs[33]._id }))._id,
+      citizen: citizen1._id,
+      organization: elektrOrg._id,
+      department: elektrDep._id,
       category: 'Elektr ta\'minoti',
       subject: 'Xonobod shahar elektr kuchlanishi pastligi',
       description: 'Xonobod shahar mahallasida elektr kuchlanishi 160V ga tushib ketmoqda.',
       status: 'Objection',
       priority: 'Urgent',
-      assignedEmployee: agent._id,
+      assignedEmployee: elektrAdmin._id,
       objection: {
-        reason: 'Elektr ta\'minoti baribir barqaror emas, kuchlanish past!',
+        reason: 'Elektr ta\'minoti baribir barqaror emas, transformatorda ortiqcha yuklama bor!',
         status: 'Under Review',
         submittedAt: new Date()
-      }
+      },
+      createdAt: new Date(Date.now() - 36 * 3600 * 1000)
     });
 
     await Appeal.create({
-      appealNumber: 'APL-2026-000103',
-      citizen: citizen._id,
-      organization: createdOrgs[5]._id, // Xonobod shahar gaz ta'minoti bo'limi
-      department: (await Department.findOne({ organization: createdOrgs[5]._id }))._id,
-      category: 'Gaz ta\'minoti',
-      subject: 'Xonobod shahar gaz bosimi bo\'yicha murojaat',
-      description: 'Navro\'z ko\'chasida gaz bosimi juda past.',
+      appealNumber: 'APL-2026-000107',
+      citizen: citizen2._id,
+      organization: elektrOrg._id,
+      department: elektrDep._id,
+      category: 'Elektr simlari',
+      subject: 'Yangi ko\'chada elektr tayanch ustuni qulash xavfi',
+      description: 'Kuchli shamol oqibatida beton simyog\'och og\'ib qolgan.',
       status: 'Received',
-      priority: 'Medium'
+      priority: 'Urgent',
+      createdAt: new Date(Date.now() - 1 * 3600 * 1000)
+    });
+
+    // 3. SUV TA'MINOTI BO'LIMI (XONOBOD_SUV)
+    const suvOrg = createdOrgs.find(o => o.code === 'XONOBOD_SUV');
+    const suvDep = await Department.findOne({ organization: suvOrg._id });
+    const suvAdmin = orgAdminsMap['XONOBOD_SUV'];
+
+    await Appeal.create({
+      appealNumber: 'APL-2026-000108',
+      citizen: citizen1._id,
+      organization: suvOrg._id,
+      department: suvDep._id,
+      category: 'Ichimlik suvi',
+      subject: 'Xonobod shahar Bo\'ston ko\'chasida toza ichimlik suvi bosimi pastligi',
+      description: 'Uchinchi qavatgacha ichimlik suvi yetib chiqmayapti.',
+      status: 'Received',
+      priority: 'Medium',
+      createdAt: new Date(Date.now() - 5 * 3600 * 1000)
+    });
+
+    // 4. HOKIMLIK (XONOBOD_HOKIMLIGI)
+    const hokimOrg = createdOrgs.find(o => o.code === 'XONOBOD_HOKIMLIGI');
+    const hokimDep = await Department.findOne({ organization: hokimOrg._id });
+    const hokimAdmin = orgAdminsMap['XONOBOD_HOKIMLIGI'];
+
+    const appeal1 = await Appeal.create({
+      appealNumber: 'APL-2026-000101',
+      citizen: citizen1._id,
+      organization: hokimOrg._id,
+      department: hokimDep._id,
+      category: 'Hokimiyat masalalari',
+      subject: 'Xonobod shahar hokimligiga infratuzilma bo\'yicha murojaat',
+      description: "Xonobod shahri markaziy ko'chasida tungi yoritish chiroqlari va yo'l infratuzilmasini yaxshilash so'raladi.",
+      status: 'Execution Submitted',
+      priority: 'High',
+      assignedEmployee: hokimAdmin._id,
+      executionReport: {
+        text: 'Tungi yoritish chiroqlari almashtirildi va hudud ko\'zdan kechirildi.',
+        submittedAt: new Date()
+      },
+      createdAt: new Date(Date.now() - 40 * 3600 * 1000)
+    });
+
+    // 5. ICHKI ISHLAR BO'LIMI (XONOBOD_IIB)
+    const iibOrg = createdOrgs.find(o => o.code === 'XONOBOD_IIB');
+    const iibDep = await Department.findOne({ organization: iibOrg._id });
+    await Appeal.create({
+      appealNumber: 'APL-2026-000109',
+      citizen: citizen2._id,
+      organization: iibOrg._id,
+      department: iibDep._id,
+      category: 'Jamoat tartibi',
+      subject: 'Markaziy xiyobonda jamoat tartibini kuchaytirish',
+      description: 'Tungi vaqtlarda xiyobonda patrul xizmatini yo\'lga qo\'yish so\'raladi.',
+      status: 'Received',
+      priority: 'Medium',
+      createdAt: new Date(Date.now() - 10 * 3600 * 1000)
     });
 
     // Seed Audit Log entries
@@ -550,7 +729,23 @@ const seedDB = async () => {
       details: { channel: 'Telegram Bot' }
     });
 
-    logger.info('Database seeding completed successfully with 34 Khanabad organizations!');
+    await AuditLog.create({
+      action: 'SYSTEM_SEEDED',
+      actorName: 'System Seeder',
+      actorRole: 'System',
+      newState: 'Initialized',
+      details: { organizationsCount: createdOrgs.length, accountsCreated: Object.keys(orgCredentials).length + 2 }
+    });
+
+    logger.info('================================================================');
+    logger.info(`SUCCESS: Database seeded with ${createdOrgs.length} Khanabad organizations!`);
+    logger.info(`SUCCESS: ${Object.keys(orgCredentials).length} individual organization accounts created.`);
+    logger.info('Gas Department admin: username=gaz_admin, password=Gaz#2026!');
+    logger.info('Electric Department admin: username=elektr_admin, password=Elektr#2026!');
+    logger.info('Super Admin: username=admin, password=admin123');
+    logger.info('Agency Inspector: username=inspector, password=admin123');
+    logger.info('================================================================');
+
     process.exit(0);
   } catch (error) {
     logger.error(`Database seeding failed: ${error.message}`);

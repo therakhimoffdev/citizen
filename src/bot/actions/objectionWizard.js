@@ -66,7 +66,7 @@ const objectionWizard = new WizardScene(
         const client = getApiClient(ctx.session.token);
         const { appealId, objectionData } = ctx.wizard.state;
         
-        const response = await client.post(`/appeals/${appealId}/object`, {
+        const response = await client.post(`/appeals/${appealId}/objection`, {
           reason: objectionData.reason,
           attachments: objectionData.attachments
         });
