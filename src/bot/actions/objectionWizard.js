@@ -110,7 +110,7 @@ const objectionWizard = new WizardScene(
         form.append('fileId', fileId);
         
         const uploadRes = await axios.post(
-          `${process.env.API_URL || 'http://localhost:5000/api'}/files/upload`,
+          `${getApiClient.getBaseApiUrl()}/files/upload`,
           form,
           {
             headers: {

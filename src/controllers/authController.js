@@ -7,7 +7,7 @@ const logger = require('../utils/logger');
 const { logAudit } = require('../utils/auditLogger');
 
 const generateToken = (id, role) => {
-  return jwt.sign({ id, role }, process.env.JWT_SECRET, {
+  return jwt.sign({ id, role }, process.env.JWT_SECRET || 'super_secret_jwt_key_for_national_appeals_system_2026', {
     expiresIn: '30d'
   });
 };

@@ -77,4 +77,20 @@ bot.on('text', async (ctx) => {
   ctx.reply(welcome);
 });
 
+// Global error handler for Telegraf
+bot.catch((err, ctx) => {
+  logger.error(`Telegraf error caught: ${err.message}`, { stack: err.stack });
+  try {
+    const lang = ctx?.session?.language || 'uz';
+    const msg = lang === 'uz'
+      ? 'Kutilmagan xatolik yuz berdi. Iltimos qaytadan urinib ko\'ring.'
+      : lang === 'ru'
+        ? 'Произошла непредвиденная ошибка. Пожалуйста, попробуйте снова.'
+        : 'An unexpected error occurred. Please try again.';
+    ctx?.reply(msg);
+  } catch (replyErr) {
+    logger.error(`Failed to send fallback error reply: ${replyErr.message}`);
+  }
+});
+
 module.exports = bot;

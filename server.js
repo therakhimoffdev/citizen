@@ -23,16 +23,19 @@ const startServer = async () => {
 
     // 3. Launch Telegram Bot (Fault-tolerant: Express API keeps running even if bot polling has conflict)
     if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN_HERE') {
-      try {
-        await bot.launch();
-        logger.info('Telegraf Telegram Bot successfully launched and polling.');
-        
-        // 4. Start Background Notification Dispatcher
-        startNotificationDispatcher(bot);
-        logger.info('Notification dispatcher background service started.');
-      } catch (botErr) {
-        logger.warn(`Telegram Bot launch warning (conflict or network): ${botErr.message}. REST API remains running.`);
-      }
+      bot.launch()
+        .then(() => {
+          logger.info('Telegraf Telegram Bot stopped polling.');
+        })
+        .catch((botErr) => {
+          logger.warn(`Telegram Bot launch warning (conflict or network): ${botErr.message}. REST API remains running.`);
+        });
+
+      logger.info('Telegraf Telegram Bot successfully initiated and polling.');
+
+      // 4. Start Background Notification Dispatcher
+      startNotificationDispatcher(bot);
+      logger.info('Notification dispatcher background service started.');
     } else {
       logger.warn('TELEGRAM_BOT_TOKEN is not configured. Telegram Bot and notification dispatcher will not start.');
     }

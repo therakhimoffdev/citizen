@@ -20,6 +20,9 @@ const auditRoutes = require('./src/routes/auditRoutes');
 
 const app = express();
 
+// Enable trust proxy for cloud environments (Render, Heroku, reverse proxies)
+app.set('trust proxy', 1);
+
 // Security HTTP headers
 app.use(helmet());
 
@@ -36,10 +39,15 @@ app.use(morgan('combined', {
   }
 }));
 
-// Rate limiting
+// Rate limiting (with proxy support and loopback skip for internal bot requests)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 1000, // limit each IP to 1000 requests per windowMs
+  validate: { xForwardedForHeader: false },
+  skip: (req) => {
+    const ip = req.ip || req.connection?.remoteAddress || '';
+    return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
+  },
   message: { success: false, message: 'Too many requests from this IP, please try again after 15 minutes' }
 });
 app.use('/api/', limiter);
