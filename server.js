@@ -3,6 +3,7 @@ const app = require('./app');
 const connectDB = require('./src/config/db');
 const bot = require('./src/bot/bot');
 const { startNotificationDispatcher } = require('./src/services/notificationService');
+const { ensureOrgAdmins } = require('./src/services/ensureOrgAdmins');
 const logger = require('./src/utils/logger');
 
 const PORT = process.env.PORT || 5000;
@@ -11,6 +12,9 @@ const startServer = async () => {
   try {
     // 1. Connect to Database
     await connectDB();
+
+    // 1.1 Ensure 34 Organizations & Credentials exist in Database
+    await ensureOrgAdmins();
 
     // 2. Start Express REST API Server
     const server = app.listen(PORT, () => {

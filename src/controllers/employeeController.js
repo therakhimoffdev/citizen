@@ -46,7 +46,11 @@ exports.createEmployee = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
     
-    const organizationId = req.user.organization._id || req.user.organization;
+    let organizationId = req.user.organization?._id || req.user.organization;
+    const globalRoles = ['Super Admin', 'Agency Admin'];
+    if (globalRoles.includes(req.userRole) && req.body.organizationId) {
+      organizationId = req.body.organizationId;
+    }
     
     const employee = await Employee.create({
       username,
